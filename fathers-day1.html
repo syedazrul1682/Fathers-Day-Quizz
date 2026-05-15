@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Father's Day Crossword</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(-45deg, #e8f4fd, #d6e8ff, #e4ecff, #f0f5ff);
+  background-size: 400% 400%;
+  animation: gradientBG 10s ease infinite;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+@keyframes gradientBG {
+  0%  { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100%{ background-position: 0% 50%; }
+}
+
+/* Floating items */
+.flowers { position:fixed; top:0; left:0; width:100%; height:100%; overflow:hidden; z-index:0; pointer-events:none; }
+.flower  { position:absolute; bottom:-80px; opacity:0.85; }
+
+@keyframes tieFlutter {
+  0%  { transform:translateY(0)      rotate(-18deg) scaleX(1);    opacity:0.8; }
+  10% { transform:translateY(-12vh)  rotate(18deg)  scaleX(0.85); }
+  20% { transform:translateY(-24vh)  rotate(-14deg) scaleX(1.1);  }
+  30% { transform:translateY(-36vh)  rotate(14deg)  scaleX(0.88); }
+  40% { transform:translateY(-50vh)  rotate(-12deg) scaleX(1.08); opacity:0.9; }
+  50% { transform:translateY(-62vh)  rotate(12deg)  scaleX(0.9);  }
+  60% { transform:translateY(-74vh)  rotate(-10deg) scaleX(1.06); }
+  70% { transform:translateY(-87vh)  rotate(10deg)  scaleX(0.92); opacity:0.6; }
+  80% { transform:translateY(-100vh) rotate(-8deg)  scaleX(1);    }
+  100%{ transform:translateY(-125vh) rotate(0deg)   scaleX(1);    opacity:0; }
+}
+@keyframes hammerTumble {
+  0%  { transform:translateY(0)      rotate(0deg)   translateX(0);   opacity:0.8; }
+  15% { transform:translateY(-18vh)  rotate(90deg)  translateX(12px); }
+  30% { transform:translateY(-37vh)  rotate(180deg) translateX(-10px); }
+  45% { transform:translateY(-56vh)  rotate(270deg) translateX(14px); opacity:0.85; }
+  60% { transform:translateY(-75vh)  rotate(360deg) translateX(-8px); }
+  75% { transform:translateY(-93vh)  rotate(450deg) translateX(10px); opacity:0.5; }
+  100%{ transform:translateY(-125vh) rotate(540deg) translateX(0);   opacity:0; }
+}
+@keyframes watchSwing {
+  0%  { transform:translateY(0)      rotate(-30deg) translateX(-20px); opacity:0.8; }
+  20% { transform:translateY(-25vh)  rotate(30deg)  translateX(20px); }
+  40% { transform:translateY(-50vh)  rotate(-25deg) translateX(-16px); opacity:0.9; }
+  60% { transform:translateY(-75vh)  rotate(20deg)  translateX(14px); }
+  80% { transform:translateY(-100vh) rotate(-10deg) translateX(-8px); opacity:0.4; }
+  100%{ transform:translateY(-125vh) rotate(0deg)   translateX(0);   opacity:0; }
+}
+@keyframes heartFloat {
+  0%  { transform:translateY(0)      scale(1)    rotate(0deg);  opacity:0.8; }
+  10% { transform:translateY(-12vh)  scale(1.25) rotate(-5deg); }
+  20% { transform:translateY(-25vh)  scale(0.95) rotate(5deg);  opacity:0.9; }
+  30% { transform:translateY(-37vh)  scale(1.2)  rotate(-4deg); }
+  50% { transform:translateY(-62vh)  scale(1.18) rotate(-3deg); opacity:0.85; }
+  70% { transform:translateY(-87vh)  scale(1.15) rotate(-2deg); opacity:0.55; }
+  100%{ transform:translateY(-125vh) scale(1)    rotate(0deg);  opacity:0; }
+}
+
+/* Corner flowers */
+.corner-flowers { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+.corner-flowers::before {
+  content:""; position:fixed; top:0; left:0; width:300px; height:300px;
+  background:url("images/top left flower.png") no-repeat;
+  background-size:contain; background-position:top left;
+  transform:translate(-50px,-70px);
+}
+.corner-flowers::after {
+  content:""; position:fixed; bottom:0; right:0; width:300px; height:300px;
+  background:url("images/bottom right.png") no-repeat;
+  background-size:contain; background-position:bottom right;
+  transform:translate(50px,50px);
+}
+body > *:not(.flowers):not(.corner-flowers) { position:relative; z-index:1; }
+
+/* Login / Home */
+.homepage { display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px; }
+.quiz-container {
+  background:#EEF4FF; width:95%; max-width:600px; padding:60px;
+  border-radius:16px; box-shadow:0 15px 35px rgba(0,0,0,0.2);
+  text-align:center; position:relative;
+}
+.quiz-container h1, .quiz-container p {
+  background:linear-gradient(90deg,#1a6bcc 50%,#0f3d9e 50%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.banner { width:100%; max-height:300px; object-fit:contain; margin-bottom:-10px; }
+.start-btn {
+  background:#1a6bcc; color:white; border:none;
+  padding:14px 30px; border-radius:10px;
+  font-size:18px; cursor:pointer; margin-top:30px; transition:0.3s;
+}
+.start-btn:hover { background:#155ab0; transform:scale(1.05); }
+@media(max-width:600px){
+  .quiz-container { padding:30px; }
+  .quiz-container h1 { font-size:24px; }
+}
+
+/* Crossword page */
+#crosswordPage {
+  max-width:900px; margin:30px auto;
+  background:#EEF4FF; border-radius:16px;
+  box-shadow:0 15px 35px rgba(0,0,0,0.2);
+  padding:30px 20px 40px; color:#0f3d9e;
+}
+.cw-header { text-align:center; margin-bottom:20px; }
+.cw-title  { font-size:28px; font-weight:bold; color:#0f3d9e; margin-bottom:6px; }
+.cw-sub    { font-size:15px; color:#555; }
+
+.cw-layout { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+
+/* Grid */
+.cw-grid {
+  display:grid; gap:2px;
+  background:#1a6bcc; border:3px solid #1a6bcc;
+  border-radius:8px; overflow:hidden; flex-shrink:0;
+}
+.cell       { width:38px; height:38px; background:#0f3d9e; position:relative; }
+.cell.white { background:#ffffff; }
+.cell.white input {
+  width:100%; height:100%; border:none; outline:none;
+  text-align:center; font-family:Arial,sans-serif;
+  font-size:17px; font-weight:700; text-transform:uppercase;
+  background:transparent; color:#0f3d9e; caret-color:#1a6bcc;
+  cursor:pointer; padding:0;
+}
+.cell.white input:focus   { background:#d6e8ff; }
+.cell.white input.correct { color:#1a6bcc; background:#e4f0ff; }
+.cell.white input.wrong   { color:#c0392b; background:#fdecea; }
+.cell-num {
+  position:absolute; top:2px; left:3px;
+  font-size:8px; font-weight:700; color:#555;
+  line-height:1; pointer-events:none; z-index:2;
+}
+
+/* Clues */
+.cw-clues { min-width:180px; flex:1 1 200px; }
+.clue-section-title {
+  font-size:16px; font-weight:bold; color:#1a6bcc;
+  margin-bottom:8px; border-bottom:2px solid #c1d7f4; padding-bottom:4px;
+}
+.clue-list { list-style:none; margin-bottom:16px; }
+.clue-list li {
+  font-size:13.5px; line-height:1.55; margin-bottom:6px;
+  color:#0f3d9e; cursor:pointer; padding:4px 6px;
+  border-radius:5px; transition:background 0.15s;
+}
+.clue-list li:hover { background:#d6e8ff; }
+.clue-num { font-weight:bold; margin-right:4px; }
+
+/* Buttons */
+.cw-actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+.btn {
+  padding:9px 20px; border:2px solid #1a6bcc;
+  background:transparent; color:#1a6bcc; border-radius:8px;
+  font-family:Arial,sans-serif; font-size:14px; font-weight:bold;
+  cursor:pointer; transition:0.2s;
+}
+.btn:hover         { background:#1a6bcc; color:#fff; }
+.btn.primary       { background:#1a6bcc; color:#fff; }
+.btn.primary:hover { background:#0f3d9e; }
+
+.status-msg {
+  margin-top:12px; font-size:14px; font-weight:bold;
+  color:#1a6bcc; min-height:20px; text-align:center;
+}
+.win-banner {
+  text-align:center; padding:16px; background:#e4f0ff;
+  border-radius:10px; margin-top:14px; display:none;
+}
+.win-banner h2 { color:#0f3d9e; font-size:20px; }
+
+/* ============================================================
+   TIMER DISPLAY
+============================================================ */
+#timerBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+#timerDisplay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f3d9e;
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  padding: 8px 20px;
+  border-radius: 50px;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 14px rgba(15,61,158,0.25);
+  transition: background 0.4s, color 0.4s;
+}
+#timerDisplay.warning {
+  background: #cc4a1a;
+  animation: timerPulse 1s ease infinite;
+}
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+#timerDisplay .timer-icon { font-size: 18px; }
+
+/* ============================================================
+   CELEBRATION OVERLAY
+============================================================ */
+#celebrationOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 30, 90, 0.92);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 30px;
+  animation: overlayFadeIn 0.5s ease forwards;
+}
+#celebrationOverlay.active { display: flex; }
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.cel-logo {
+  width: min(280px, 70vw);
+  max-height: 260px;
+  object-fit: contain;
+  margin-bottom: 28px;
+  animation: logoPop 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+}
+@keyframes logoPop {
+  from { opacity: 0; transform: scale(0.5) rotate(-8deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.cel-title {
+  font-size: clamp(30px, 7vw, 58px);
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  line-height: 1.15;
+  animation: textSlideUp 0.6s ease 0.5s both;
+  text-shadow: 0 2px 24px rgba(100,160,255,0.5);
+}
+.cel-heart { color: #74b3ff; }
+
+.cel-sub {
+  font-size: clamp(16px, 3.5vw, 24px);
+  color: #b8d4ff;
+  margin-top: 16px;
+  line-height: 1.5;
+  animation: textSlideUp 0.6s ease 0.8s both;
+}
+
+.cel-close-btn {
+  margin-top: 36px;
+  background: #1a6bcc;
+  color: #fff;
+  border: none;
+  padding: 14px 36px;
+  border-radius: 50px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, transform 0.15s;
+  animation: textSlideUp 0.6s ease 1.1s both;
+}
+.cel-close-btn:hover { background: #155ab0; transform: scale(1.05); }
+
+@keyframes textSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Floating hearts inside overlay */
+.cel-floaters {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: hidden;
+}
+.cel-floater {
+  position: absolute;
+  bottom: -60px;
+  font-size: 28px;
+  animation: celFloat linear infinite;
+  opacity: 0.7;
+}
+@keyframes celFloat {
+  0%   { transform: translateY(0) rotate(0deg);   opacity: 0.7; }
+  80%  { opacity: 0.5; }
+  100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+}
+
+/* ============================================================
+   TIME'S UP OVERLAY  (no close button — fully locked)
+============================================================ */
+#timesUpOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;          /* above everything, including celebration */
+  background: rgba(8, 20, 60, 0.97);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 30px;
+  animation: overlayFadeIn 0.6s ease forwards;
+  /* Block all pointer events on children via the overlay itself */
+  pointer-events: all;
+}
+#timesUpOverlay.active { display: flex; }
+
+/* Prevent ANY interaction with page beneath */
+#timesUpOverlay * { pointer-events: none; }
+
+.tu-icon {
+  font-size: clamp(64px, 15vw, 100px);
+  margin-bottom: 16px;
+  animation: tuIconBounce 1.2s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+}
+@keyframes tuIconBounce {
+  from { opacity:0; transform: scale(0.3) rotate(-15deg); }
+  to   { opacity:1; transform: scale(1) rotate(0deg); }
+}
+
+.tu-title {
+  font-size: clamp(34px, 8vw, 64px);
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  line-height: 1.1;
+  animation: textSlideUp 0.6s ease 0.4s both;
+  text-shadow: 0 2px 30px rgba(255,120,80,0.6);
+}
+
+.tu-sub {
+  font-size: clamp(16px, 3.5vw, 22px);
+  color: #b8d4ff;
+  margin-top: 18px;
+  line-height: 1.6;
+  animation: textSlideUp 0.6s ease 0.7s both;
+}
+
+.tu-badge {
+  margin-top: 30px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 16px;
+  padding: 16px 32px;
+  color: #ffd27f;
+  font-size: clamp(14px, 3vw, 18px);
+  animation: textSlideUp 0.6s ease 1s both;
+}
+
+/* Floating clock emoji background */
+.tu-floaters {
+  position: absolute; inset: 0;
+  pointer-events: none; overflow: hidden;
+}
+.tu-floater {
+  position: absolute;
+  bottom: -60px;
+  font-size: 26px;
+  animation: celFloat linear infinite;
+  opacity: 0.35;
+}
+
+@media(max-width:650px){
+  .cell { width:30px; height:30px; }
+  .cell.white input { font-size:14px; }
+  .cell-num { font-size:7px; }
+  #crosswordPage { padding:16px 8px 30px; }
+  .cw-title { font-size:20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="corner-flowers"></div>
+<div class="flowers"></div>
+
+<!-- ============================================================
+     TIME'S UP OVERLAY (no close button — permanent lockout)
+============================================================ -->
+<div id="timesUpOverlay">
+  <div class="tu-floaters" id="tuFloaters"></div>
+  <div class="tu-icon">⏰</div>
+  <div class="tu-title">Time's Up!</div>
+  <div class="tu-sub">
+    Your 10 minutes are over.<br>
+    Hope you had fun with the crossword! 💙
+  </div>
+  <div class="tu-badge">
+    🎉 Happy Father's Day, Dad! You're the best! 🎉
+  </div>
+</div>
+
+<!-- CELEBRATION OVERLAY -->
+<div id="celebrationOverlay">
+  <div class="cel-floaters" id="celFloaters"></div>
+  <img src="images/fathers%20day%20logo.png" class="cel-logo"
+       onerror="this.style.display='none'">
+  <div class="cel-title">Happy Father's Day! <span class="cel-heart">💙</span></div>
+  <div class="cel-sub" id="celSub">
+    Thank you for hanging out with us!<br>You're the best, Dad! 🎉
+  </div>
+  <button class="cel-close-btn" onclick="closeCelebration()">Close ✕</button>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="homepage">
+  <div class="quiz-container">
+    <h1>Welcome 💙</h1>
+    <p>Please enter your name to start</p>
+    <input type="text" id="username" placeholder="Enter your name"
+      style="padding:10px;width:80%;border-radius:8px;border:1px solid #ccc;margin-top:10px;font-size:16px;">
+    <br>
+    <button class="start-btn" onclick="enterSite()">Continue</button>
+  </div>
+</div>
+
+<!-- HOME PAGE -->
+<div id="home" class="homepage" style="display:none;">
+  <div class="quiz-container">
+    <img src="images/fathers%20day%20logo.png" class="banner" onerror="this.style.display='none'">
+    <h1>Father's Day Crossword 💙</h1>
+    <p>Fill in the crossword and celebrate the best dad!</p>
+    <p>Good luck and Happy Father's Day! 🎉</p>
+    <button class="start-btn" onclick="startCrossword()">Start Crossword</button>
+  </div>
+</div>
+
+<!-- CROSSWORD PAGE -->
+<div id="crosswordPage" style="display:none;">
+  <div class="cw-header">
+    <div class="cw-title">Father's Day Crossword 💙</div>
+    <div class="cw-sub">Fill in all the squares and hit Check when done!</div>
+  </div>
+
+  <!-- TIMER -->
+  <div id="timerBar">
+    <div id="timerDisplay">
+      <span class="timer-icon">⏱️</span>
+      <span id="timerText">10:00</span>
+    </div>
+  </div>
+
+  <hr style="border-color:#c1d7f4;margin-bottom:20px;">
+  <div class="cw-layout">
+    <div>
+      <div class="cw-grid" id="grid"></div>
+      <div class="cw-actions">
+        <button class="btn primary" onclick="checkAnswers()">Check</button>
+        <button class="btn" onclick="revealAll()">Reveal</button>
+        <button class="btn" onclick="clearAll()">Clear</button>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+      <div class="win-banner" id="winBanner">
+        <h2>🎉 Puzzle complete! Happy Father's Day! 💙</h2>
+      </div>
+    </div>
+    <div class="cw-clues" id="cluesPanel"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FLOATING ITEMS
+============================================================ */
+const itemDefs = [
+  { src:"images/tie.png",    anim:"tieFlutter"   },
+  { src:"images/hammer.png", anim:"hammerTumble"  },
+  { src:"images/watch.png",  anim:"watchSwing"    },
+  { src:"images/heart.png",  anim:"heartFloat"    },
+  { src:"images/heart.png",  anim:"heartFloat"    },
+];
+
+function createFlowers() {
+  const container = document.querySelector(".flowers");
+  if (!container) return;
+  for (let i = 0; i < 24; i++) {
+    const def = itemDefs[Math.floor(Math.random() * itemDefs.length)];
+    const img = document.createElement("img");
+    img.src = def.src;
+    img.classList.add("flower");
+    img.style.left  = Math.random() * 100 + "vw";
+    img.style.width = (22 + Math.random() * 55) + "px";
+    const dur   = (Math.random() * 5 + 5).toFixed(2) + "s";
+    const delay = (Math.random() * 8).toFixed(2) + "s";
+    img.style.animation = def.anim + " " + dur + " " + delay + " ease-in-out infinite";
+    container.appendChild(img);
+  }
+}
+
+/* ============================================================
+   10-MINUTE COUNTDOWN TIMER
+============================================================ */
+var TIMER_DURATION = 10 * 60; // 10 minutes in seconds
+var timerSecondsLeft = TIMER_DURATION;
+var timerInterval   = null;
+var timerStarted    = false;
+
+function formatTime(seconds) {
+  var m = Math.floor(seconds / 60);
+  var s = seconds % 60;
+  return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+function startTimer() {
+  if (timerStarted) return;
+  timerStarted = true;
+
+  document.getElementById("timerText").textContent = formatTime(timerSecondsLeft);
+
+  timerInterval = setInterval(function () {
+    timerSecondsLeft--;
+    document.getElementById("timerText").textContent = formatTime(timerSecondsLeft);
+
+    // Turn red + pulse in last 60 seconds
+    if (timerSecondsLeft <= 60) {
+      document.getElementById("timerDisplay").classList.add("warning");
+    }
+
+    if (timerSecondsLeft <= 0) {
+      clearInterval(timerInterval);
+      timerSecondsLeft = 0;
+      document.getElementById("timerText").textContent = "00:00";
+      showTimesUp();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+}
+
+function showTimesUp() {
+  var overlay = document.getElementById("timesUpOverlay");
+  var floaters = document.getElementById("tuFloaters");
+
+  // Build floating clock emojis
+  floaters.innerHTML = "";
+  var icons = ["⏰","⌛","⏱️","💙","🎉","⭐"];
+  for (var i = 0; i < 20; i++) {
+    var el = document.createElement("span");
+    el.className = "tu-floater";
+    el.textContent = icons[Math.floor(Math.random() * icons.length)];
+    el.style.left = Math.random() * 100 + "vw";
+    el.style.fontSize = (18 + Math.random() * 24) + "px";
+    el.style.animationDuration  = (5 + Math.random() * 6).toFixed(2) + "s";
+    el.style.animationDelay     = (Math.random() * 4).toFixed(2) + "s";
+    floaters.appendChild(el);
+  }
+
+  overlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+
+  // Lock every interactive element on the page
+  document.querySelectorAll("input, button, a").forEach(function(el) {
+    el.disabled = true;
+    el.style.pointerEvents = "none";
+  });
+}
+
+/* ============================================================
+   CELEBRATION OVERLAY
+============================================================ */
+function showCelebration() {
+  const overlay = document.getElementById("celebrationOverlay");
+  const floaters = document.getElementById("celFloaters");
+
+  /* Rebuild floaters each time */
+  floaters.innerHTML = "";
+  const icons = ["💙","⭐","🎉","💫","✨","💛","🎊"];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElement("span");
+    el.className = "cel-floater";
+    el.textContent = icons[Math.floor(Math.random() * icons.length)];
+    el.style.left     = Math.random() * 100 + "vw";
+    el.style.fontSize = (20 + Math.random() * 28) + "px";
+    const dur   = (4 + Math.random() * 5).toFixed(2) + "s";
+    const delay = (Math.random() * 4).toFixed(2) + "s";
+    el.style.animationDuration = dur;
+    el.style.animationDelay    = delay;
+    floaters.appendChild(el);
+  }
+
+  document.getElementById("celSub").innerHTML =
+    "Thank you for hanging out with us!<br>You're the best, Dad! 🎉";
+  overlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+
+  /* Disable Check / Reveal / Clear buttons */
+  document.querySelectorAll(".cw-actions .btn").forEach(function(btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.4";
+    btn.style.cursor  = "not-allowed";
+    btn.style.pointerEvents = "none";
+  });
+
+  stopTimer(); // stop timer on win
+  launchConfetti();
+}
+
+function closeCelebration() {
+  const overlay = document.getElementById("celebrationOverlay");
+  overlay.style.animation = "overlayFadeIn 0.3s ease reverse forwards";
+  setTimeout(function () {
+    overlay.classList.remove("active");
+    overlay.style.animation = "";
+    document.body.style.overflow = "";
+  }, 300);
+}
+
+/* ============================================================
+   LOGIN
+============================================================ */
+if (localStorage.getItem("username")) {
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("home").style.display = "flex";
+}
+
+function enterSite() {
+  const name = document.getElementById("username").value.trim();
+  if (!name) { alert("Please enter your name!"); return; }
+  localStorage.setItem("username", name);
+  document.getElementById("loginPage").style.display = "none";
+  document.getElementById("home").style.display = "flex";
+}
+
+function startCrossword() {
+  document.getElementById("home").style.display = "none";
+  document.getElementById("crosswordPage").style.display = "block";
+  buildCrossword();
+  startTimer(); // ← start the 10-minute clock
+}
+
+/* ============================================================
+   CROSSWORD WORD DEFINITIONS
+============================================================ */
+
+const ROWS = 11;
+const COLS = 10;
+
+const wordDefs = [
+  { word:"JUNE",      r:0, c:0, dir:"A", clue:"Month of Father's Day in Malaysia" },
+  { word:"CARNATION", r:4, c:0, dir:"A", clue:"Flower traditionally associated with Father's Day" },
+  { word:"DURIAN",    r:6, c:2, dir:"A", clue:"Malaysia's 'King of Fruits'" },
+  { word:"WALLET",    r:8, c:0, dir:"A", clue:"Dad always needs a new one for his cards and cash" },
+  { word:"ULTRA",     r:0, c:1, dir:"D", clue:"Dad thinks he knows _____ (5)" },
+  { word:"EATEN",     r:0, c:3, dir:"D", clue:"Mum's cooking is always _____ (5)" },
+  { word:"DULL",      r:5, c:3, dir:"D", clue:"Without Dad the weekend would be ___ (4)" }
+];
+
+function makeSolution() {
+  var grid = [];
+  for (var r = 0; r < ROWS; r++) {
+    grid.push([]);
+    for (var c = 0; c < COLS; c++) {
+      grid[r].push(null);
+    }
+  }
+  for (var i = 0; i < wordDefs.length; i++) {
+    var w = wordDefs[i];
+    for (var j = 0; j < w.word.length; j++) {
+      var rr = (w.dir === "A") ? w.r      : w.r + j;
+      var cc = (w.dir === "A") ? w.c + j  : w.c;
+      grid[rr][cc] = w.word[j];
+    }
+  }
+  return grid;
+}
+
+function startsAcross(grid, r, c) {
+  if (grid[r][c] === null) return false;
+  if (c > 0 && grid[r][c - 1] !== null) return false;
+  return (c + 1 < COLS && grid[r][c + 1] !== null);
+}
+
+function startsDown(grid, r, c) {
+  if (grid[r][c] === null) return false;
+  if (r > 0 && grid[r - 1][c] !== null) return false;
+  return (r + 1 < ROWS && grid[r + 1][c] !== null);
+}
+
+/* ============================================================
+   BUILD THE CROSSWORD DOM
+============================================================ */
+function buildCrossword() {
+  var solution = makeSolution();
+
+  var numberedCells = {};
+  var counter = 0;
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (solution[r][c] !== null &&
+          (startsAcross(solution, r, c) || startsDown(solution, r, c))) {
+        counter++;
+        numberedCells[r + "," + c] = counter;
+      }
+    }
+  }
+
+  var gridEl = document.getElementById("grid");
+  gridEl.style.gridTemplateColumns = "repeat(" + COLS + ", 38px)";
+  gridEl.style.gridTemplateRows    = "repeat(" + ROWS + ", 38px)";
+  gridEl.innerHTML = "";
+
+  var inputs = {};
+
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var cell = document.createElement("div");
+      cell.className = "cell" + (solution[r][c] !== null ? " white" : "");
+
+      if (solution[r][c] !== null) {
+        var num = numberedCells[r + "," + c];
+        if (num) {
+          var span = document.createElement("span");
+          span.className = "cell-num";
+          span.textContent = num;
+          cell.appendChild(span);
+        }
+
+        var inp = document.createElement("input");
+        inp.maxLength = 1;
+        inp.dataset.r = r;
+        inp.dataset.c = c;
+        inp.setAttribute("autocomplete", "off");
+        inp.setAttribute("autocorrect",  "off");
+        inp.setAttribute("spellcheck",   "false");
+
+        inp.addEventListener("input", function () {
+          this.value = this.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 1);
+          this.classList.remove("correct", "wrong");
+          if (this.value.length === 1) {
+            var nr = parseInt(this.dataset.r);
+            var nc = parseInt(this.dataset.c);
+            var next = inputs[nr + "," + (nc + 1)] || inputs[(nr + 1) + "," + nc];
+            if (next) next.focus();
+          }
+        });
+
+        inp.addEventListener("keydown", function (e) {
+          var r2 = parseInt(this.dataset.r);
+          var c2 = parseInt(this.dataset.c);
+          if (e.key === "Backspace" && this.value === "") {
+            var prev = inputs[r2 + "," + (c2 - 1)] || inputs[(r2 - 1) + "," + c2];
+            if (prev) { prev.focus(); prev.value = ""; }
+          }
+          if (e.key === "ArrowRight") { e.preventDefault(); focusCell(r2, c2 + 1, inputs); }
+          if (e.key === "ArrowLeft")  { e.preventDefault(); focusCell(r2, c2 - 1, inputs); }
+          if (e.key === "ArrowDown")  { e.preventDefault(); focusCell(r2 + 1, c2, inputs); }
+          if (e.key === "ArrowUp")    { e.preventDefault(); focusCell(r2 - 1, c2, inputs); }
+        });
+
+        cell.appendChild(inp);
+        inputs[r + "," + c] = inp;
+      }
+
+      gridEl.appendChild(cell);
+    }
+  }
+
+  function focusCell(r, c, inputs) {
+    var inp = inputs[r + "," + c];
+    if (inp) inp.focus();
+  }
+
+  var cluesEl = document.getElementById("cluesPanel");
+  cluesEl.innerHTML = "";
+
+  function renderSection(title, words) {
+    var t = document.createElement("div");
+    t.className = "clue-section-title";
+    t.textContent = title;
+    cluesEl.appendChild(t);
+
+    var ul = document.createElement("ul");
+    ul.className = "clue-list";
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      var realNum = numberedCells[w.r + "," + w.c];
+      var li = document.createElement("li");
+      li.innerHTML = "<span class='clue-num'>" + realNum + ".</span>" + w.clue;
+      ul.appendChild(li);
+    }
+    cluesEl.appendChild(ul);
+  }
+
+  var acrossWords = wordDefs.filter(function(w){ return w.dir === "A"; });
+  var downWords   = wordDefs.filter(function(w){ return w.dir === "D"; });
+  renderSection("Across", acrossWords);
+  renderSection("Down",   downWords);
+
+  window._cwSolution = solution;
+  window._cwInputs   = inputs;
+  window._cwROWS     = ROWS;
+  window._cwCOLS     = COLS;
+}
+
+/* ============================================================
+   CHECK / REVEAL / CLEAR
+============================================================ */
+function checkAnswers() {
+  var solution = window._cwSolution;
+  var inputs   = window._cwInputs;
+  var correct = 0, total = 0;
+
+  for (var r = 0; r < window._cwROWS; r++) {
+    for (var c = 0; c < window._cwCOLS; c++) {
+      if (solution[r][c] !== null) {
+        total++;
+        var inp = inputs[r + "," + c];
+        if (!inp) continue;
+        if (inp.value === solution[r][c]) {
+          inp.classList.add("correct");
+          inp.classList.remove("wrong");
+          correct++;
+        } else if (inp.value !== "") {
+          inp.classList.add("wrong");
+          inp.classList.remove("correct");
+        }
+      }
+    }
+  }
+
+  var msg = document.getElementById("statusMsg");
+  if (correct === total) {
+    msg.textContent = "🎉 Perfect! Happy Father's Day!";
+    document.getElementById("winBanner").style.display = "block";
+    setTimeout(showCelebration, 400);
+  } else {
+    msg.textContent = correct + " / " + total + " letters correct — keep going!";
+  }
+}
+
+/* Build a flat ordered list of all letter positions to reveal one at a time */
+var revealLetterIndex = 0;
+var revealLetterQueue = null; // built lazily after crossword is ready
+
+function buildRevealQueue() {
+  var queue = [];
+  for (var i = 0; i < wordDefs.length; i++) {
+    var w = wordDefs[i];
+    for (var j = 0; j < w.word.length; j++) {
+      var rr = (w.dir === "A") ? w.r     : w.r + j;
+      var cc = (w.dir === "A") ? w.c + j : w.c;
+      queue.push({ r: rr, c: cc, letter: w.word[j] });
+    }
+  }
+  /* Deduplicate cells that belong to crossing words */
+  var seen = {};
+  var unique = [];
+  for (var k = 0; k < queue.length; k++) {
+    var key = queue[k].r + "," + queue[k].c;
+    if (!seen[key]) { seen[key] = true; unique.push(queue[k]); }
+  }
+  return unique;
+}
+
+function revealAll() {
+  var inputs = window._cwInputs;
+
+  /* Build queue once */
+  if (!revealLetterQueue) revealLetterQueue = buildRevealQueue();
+
+  /* Find the next cell that isn't already correctly filled */
+  var revealed = false;
+  while (revealLetterIndex < revealLetterQueue.length) {
+    var item = revealLetterQueue[revealLetterIndex];
+    revealLetterIndex++;
+    var inp = inputs[item.r + "," + item.c];
+    if (!inp) continue;
+    if (inp.value === item.letter) continue; /* already correct — skip */
+
+    /* Reveal just this one letter */
+    inp.value = item.letter;
+    inp.classList.add("correct");
+    inp.classList.remove("wrong");
+    revealed = true;
+
+    /* Deduct 30 seconds */
+    if (timerStarted && timerSecondsLeft > 0) {
+      timerSecondsLeft = Math.max(0, timerSecondsLeft - 30);
+      document.getElementById("timerText").textContent = formatTime(timerSecondsLeft);
+      if (timerSecondsLeft <= 60) {
+        document.getElementById("timerDisplay").classList.add("warning");
+      }
+      /* Flash timer as penalty warning */
+      var td = document.getElementById("timerDisplay");
+      td.style.background = "#c0392b";
+      td.style.transform  = "scale(1.1)";
+      setTimeout(function () {
+        td.style.background = "";
+        td.style.transform  = "";
+      }, 350);
+      if (timerSecondsLeft === 0) {
+        clearInterval(timerInterval);
+        showTimesUp();
+        return;
+      }
+    }
+
+    document.getElementById("statusMsg").textContent =
+      "Revealed: \"" + item.letter + "\" — \u221230s ⏱️";
+    break;
+  }
+
+  if (!revealed) {
+    document.getElementById("statusMsg").textContent = "All letters revealed! 💙";
+    document.getElementById("winBanner").style.display = "block";
+  }
+}
+
+function clearAll() {
+  var inputs = window._cwInputs;
+  for (var key in inputs) {
+    inputs[key].value = "";
+    inputs[key].classList.remove("correct", "wrong");
+  }
+  document.getElementById("statusMsg").textContent = "";
+  document.getElementById("winBanner").style.display = "none";
+}
+
+function launchConfetti() {
+  var myConfetti = confetti.create(null, { resize: true, useWorker: false });
+  var end = Date.now() + 4000;
+  (function frame() {
+    myConfetti({ particleCount:6, angle:60,  spread:60, origin:{x:0}, colors:["#1a6bcc","#74b3ff","#ffffff","#ffd700"] });
+    myConfetti({ particleCount:6, angle:120, spread:60, origin:{x:1}, colors:["#1a6bcc","#74b3ff","#ffffff","#ffd700"] });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  }());
+}
+
+window.onload = createFlowers;
+</script>
+</body>
+</html>
